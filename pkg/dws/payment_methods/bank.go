@@ -48,3 +48,7 @@ func (b *Bank) Pay(amount float64, fromCurr, toCurr dws.Currency) (bool, error) 
 func (b *Bank) PaymentMethod() dws.PaymentMethod {
 	return dws.BankTransfer
 }
+
+func (b *Bank) GetId() int {
+	return b.Id
+}

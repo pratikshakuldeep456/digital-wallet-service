@@ -39,3 +39,7 @@ func (c *CreditCard) Pay(amount float64, fromCurr, toCurr dws.Currency) (bool, e
 func (c *CreditCard) PaymentMethod() dws.PaymentMethod {
 	return dws.CreditCard
 }
+
+func (c *CreditCard) GetId() int {
+	return c.Id
+}

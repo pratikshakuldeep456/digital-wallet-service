@@ -1,6 +1,9 @@
 package dws
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 type Account struct {
 	Id           int
@@ -12,6 +15,14 @@ type Account struct {
 	Mu           sync.Mutex
 }
 
+//	func NewAccount(accountNo string, currency Currency, balance float64) *Account {
+//		return &Account{
+//			Id:        GenerateId(),
+//			AccountNo: accountNo,
+//			Currency:  currency,
+//			Balance:   balance,
+//		}
+//	}
 func (a *Account) Deposit(amount float64) error {
 	a.Mu.Lock()
 	defer a.Mu.Unlock()
@@ -44,11 +55,11 @@ func (a *Account) Transfer(amount float64, to *Account) error {
 	defer a.Mu.Unlock()
 
 	if amount <= 0 {
-		return nil
+		return errors.New("amount should be greater than 0")
 	}
 
 	if a.Balance < amount {
-		return nil
+		return errors.New("insufficient balance")
 	}
 
 	a.Balance -= amount

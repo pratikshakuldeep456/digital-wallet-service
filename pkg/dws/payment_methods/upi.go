@@ -32,3 +32,7 @@ func (u *Upi) Pay(amount float64, fromCurr, toCurr dws.Currency) (bool, error) {
 func (u *Upi) PaymentMethod() dws.PaymentMethod {
 	return dws.UpiTransfer
 }
+
+func (u *Upi) GetId() int {
+	return u.Id
+}
