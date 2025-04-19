@@ -6,23 +6,26 @@ import (
 )
 
 type Bank struct {
+	dws.BasePayment
 	BankName      string
 	HolderName    string
 	AccountNumber string
 	IFSCCode      string
-	converter     *dws.SimpleCurrencyConverter
 }
 
 func NewBank(BankName string,
 	HolderName string,
 	AccountNumber string,
-	IFSCCode string) *Bank {
+	IFSCCode string, user *dws.User) *Bank {
 	return &Bank{
+		BasePayment: dws.BasePayment{
+			Id:   dws.GenerateId(),
+			User: user,
+		},
 		BankName:      BankName,
 		HolderName:    HolderName,
 		AccountNumber: AccountNumber,
 		IFSCCode:      IFSCCode,
-		converter:     &dws.SimpleCurrencyConverter{},
 	}
 
 }
@@ -30,7 +33,7 @@ func (b *Bank) Pay(amount float64, fromCurr, toCurr dws.Currency) (bool, error) 
 	if amount <= 0 {
 		return false, nil
 	}
-	convertedAmount, err := b.converter.Convert(amount, fromCurr, toCurr)
+	convertedAmount, err := dws.Convert(amount, fromCurr, toCurr)
 	if err != nil {
 		return false, err
 	}

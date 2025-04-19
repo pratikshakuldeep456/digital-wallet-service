@@ -1,7 +1,6 @@
 package dws
 
 import (
-	"errors"
 	"sync"
 	"time"
 )
@@ -9,6 +8,7 @@ import (
 type DigitalWalletService struct {
 	User           map[int]*User
 	PaymentMethods map[int][]Payment
+	Transactions   map[int][]*Transaction
 }
 
 var (
@@ -72,38 +72,60 @@ func (d *DigitalWalletService) GetPaymentMethods(userid int) []Payment {
 	return d.PaymentMethods[userid]
 }
 
-func (d *DigitalWalletService) TransferFunds(senderID int,
-	receiverID int, amount float64, payment Payment, currfrom Currency, currto Currency) (error, bool) {
-	sender, receiver := d.User[senderID], d.User[receiverID]
-	if sender == nil || receiver == nil {
-		return errors.New("invalid user(s)"), false
+func (d *DigitalWalletService) TransferFunds(sen, rec *Account, amount float64, curr Currency) (error, bool) {
+
+	sourceAmoutn := amount
+	if sen.Currency != curr {
+		converter, err := Convert(amount, curr, sen.Currency)
+		if err != nil {
+			return err, false
+		}
+		sourceAmoutn = converter
 	}
-	data, err := payment.Pay(amount, currfrom, currto)
-	if err != nil || !data {
-		return errors.New("payment failed"), false
+	sen.Withdraw(sourceAmoutn)
+
+	recAmount := amount
+	if rec.Currency != curr {
+		converter, err := Convert(amount, curr, rec.Currency)
+		if err != nil {
+			return err, false
+		}
+		recAmount = converter
 
 	}
+	rec.Deposit(recAmount)
 
-	//add transactions
-	txn := Transaction{
+	// Create a transaction for the sender
+	txn := &Transaction{
 		Id:              GenerateId(),
-		Amount:          amount,
+		Amount:          sourceAmoutn,
 		TransactionType: Debit,
-		SrcAccount:      sender.Accounts[0], // Simplified
-		DesAccount:      receiver.Accounts[0],
+		SrcAccount:      sen,
+		DesAccount:      rec,
 		CreatedAt:       time.Now(),
 	}
-
-	convertedAmount, err1 := payment.CurrencyConverter().Convert(amount, currfrom, currto)
-	if err1 != nil {
-		return err1, false
+	sen.AddTransaction(txn)
+	// Create a transaction for the receiver
+	txn = &Transaction{
+		Id:              GenerateId(),
+		Amount:          recAmount,
+		TransactionType: Credit,
+		SrcAccount:      rec,
+		DesAccount:      sen,
+		CreatedAt:       time.Now(),
 	}
-
-	sender.Accounts[0].Balance -= amount
-	receiver.Accounts[0].Balance += convertedAmount
-	sender.Accounts[0].Transactions = append(sender.Accounts[0].Transactions, &txn)
-	receiver.Accounts[0].Transactions = append(receiver.Accounts[0].Transactions, &txn)
-
+	rec.AddTransaction(txn)
+	// Add the transaction to the user's transaction history
+	d.Transactions[sen.User.Id] = append(d.Transactions[sen.User.Id], txn)
+	d.Transactions[rec.User.Id] = append(d.Transactions[rec.User.Id], txn)
 	return nil, true
 
+}
+
+func (d *DigitalWalletService) GetTransactionHistory(userid int) []*Transaction {
+	user := d.User[userid]
+	if user == nil {
+		return nil
+	}
+	return d.Transactions[userid]
 }
